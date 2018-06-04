@@ -2,7 +2,6 @@
 
 precision highp float;
 
-
 /////////////////////
 // CONSTANTS       //
 /////////////////////
@@ -74,14 +73,14 @@ float apply_atten_curve(float dist, int atten_type, float atten_params[5])
 
     switch(atten_type)
     {
-        case 0: // linear
+        case 1: // linear
         {
             float begin_atten = atten_params[0];
             float end_atten = atten_params[1];
             atten = linear_interpolate(dist, begin_atten, end_atten);
             break;
         }
-        case 1: // smooth
+        case 2: // smooth
         {
             float begin_atten = atten_params[0];
             float end_atten = atten_params[1];
@@ -89,7 +88,7 @@ float apply_atten_curve(float dist, int atten_type, float atten_params[5])
             atten = 3.0f * pow(tmp, 2.0f) - 2.0f * pow(tmp, 3.0f);
             break;
         }
-        case 2: // inverse
+        case 3: // inverse
         {
             float scale = atten_params[0];
             float offset = atten_params[1];
@@ -100,7 +99,7 @@ float apply_atten_curve(float dist, int atten_type, float atten_params[5])
                 0.0f, 1.0f);
             break;
         }
-        case 3: // inverse square
+        case 4: // inverse square
         {
             float scale = atten_params[0];
             float offset = atten_params[1];
@@ -112,6 +111,9 @@ float apply_atten_curve(float dist, int atten_type, float atten_params[5])
                 0.0f, 1.0f);
             break;
         }
+        case 0:
+        default:
+            break; // no attenuation
     }
 
     return atten;
@@ -119,10 +121,20 @@ float apply_atten_curve(float dist, int atten_type, float atten_params[5])
 
 vec3 apply_light(Light light) {
     vec3 N = normalize(normal.xyz);
-    vec3 L = (viewMatrix * worldMatrix * light.lightPosition).xyz - v.xyz;
+    vec3 L;
+    vec3 light_dir = normalize((viewMatrix * worldMatrix * vec4(light.lightDirection, 0.0f)).xyz);
+
+    if (v.w == 0.0f)
+    {
+        L = -light_dir;
+    }
+    else
+    {
+        L = (viewMatrix * worldMatrix * light.lightPosition).xyz - v.xyz;
+    }
+
     float lightToSurfDist = length(L);
     L = normalize(L);
-    vec3 light_dir = normalize((viewMatrix * worldMatrix * vec4(light.lightDirection, 0.0f)).xyz);
     float lightToSurfAngle = acos(dot(L, light_dir));
 
     // angle attenuation
@@ -131,26 +143,31 @@ vec3 apply_light(Light light) {
     // distance attenuation
     atten *= apply_atten_curve(lightToSurfDist, light.lightDistAttenCurveType, light.lightDistAttenCurveParams);
 
-    vec3 R = normalize(2.0f * dot(L, N), 0.0f, 1.0f *  N - L);
+    vec3 R = normalize(2.0f * dot(L, N) *  N - L);
     vec3 V = normalize(-v.xyz);
 
-    vec3 linearColor = vec3(0);
+    vec3 linearColor;
 
     if (usingDiffuseMap)
+    {
         linearColor = ambientColor.rgb + light.lightIntensity * atten * light.lightColor.rgb * (texture(diffuseMap, uv).rgb * clamp(dot(N, L), 0.0f, 1.0f) + specularColor.rgb * pow(clamp(dot(R, V), 0.0f, 1.0f), specularPower)); 
+    }
     else
-        linearColor = ambientColor.rgb + light.lightIntensity * atten * light.lightColor.rgb * (diffuseColor.rgb * clamp(dot(N, L), 0.0f, 1.0f) + specularColor.rgb * pow(clamp(dot(R,V), 0.0f, 1.0f), specularPower)); 
+    {
+        linearColor = ambientColor.rgb + light.lightIntensity * atten * light.lightColor.rgb * (diffuseColor.rgb * clamp(dot(N, L), 0.0f, 1.0f) + specularColor.rgb * pow(clamp(dot(R, V), 0.0f, 1.0f), specularPower)); 
+    }
 
     return linearColor;
 }
 
 void main(void)
 {
-    vec3 linearColor = vec3(0);
+    vec3 linearColor = vec3(0.0f);
     for (int i = 0; i < numLights; i++)
     {
         linearColor += apply_light(allLights[i]); 
     }
 
+    // gama correction
     outputColor = vec4(clamp(pow(linearColor, vec3(1.0f/2.2f)), 0.0f, 1.0f), 1.0f);
 }
