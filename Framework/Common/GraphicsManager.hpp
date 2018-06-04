@@ -1,10 +1,12 @@
 #pragma once
+#include <vector>
+#include <memory>
 #include "IRuntimeModule.hpp"
+#include "IShaderManager.hpp"
 #include "geommath.hpp"
 #include "Image.hpp"
 #include "Scene.hpp"
 #include "Polyhedron.hpp"
-#include <vector>
 
 using namespace std;
 
@@ -42,8 +44,6 @@ namespace My {
 #endif
 
     protected:
-        virtual bool InitializeShaders();
-        virtual void ClearShaders();
         virtual void InitializeBuffers(const Scene& scene);
         virtual void ClearBuffers();
 

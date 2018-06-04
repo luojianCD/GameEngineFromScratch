@@ -27,8 +27,6 @@ namespace My {
         void UpdateConstants();
         void InitializeBuffers(const Scene& scene);
         void ClearBuffers();
-        bool InitializeShaders();
-        void ClearShaders();
         void RenderBuffers();
 
     private:
@@ -44,6 +42,9 @@ namespace My {
         HRESULT CreateRootSignature();
         HRESULT WaitForPreviousFrame();
         HRESULT PopulateCommandList();
+        HRESULT InitializePSO();
+        HRESULT CreateCommandList();
+
 
     private:
         static const uint32_t           kFrameCount  = 2;

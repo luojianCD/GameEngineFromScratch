@@ -5,6 +5,7 @@
 #include "SceneManager.hpp"
 #include "AssetLoader.hpp"
 #include "IPhysicsManager.hpp"
+#include "D3dShaderManager.hpp"
 
 using namespace My;
 using namespace std;
@@ -958,23 +959,9 @@ HRESULT D3d12GraphicsManager::CreateRootSignature()
 }
 
 
-// this is the function that loads and prepares the shaders
-bool D3d12GraphicsManager::InitializeShaders() {
+// this is the function that loads and prepares the pso 
+HRESULT D3d12GraphicsManager::InitializePSO() {
     HRESULT hr = S_OK;
-    const char* vsFilename = "Shaders/basic_vs.cso"; 
-    const char* fsFilename = "Shaders/basic_ps.cso";
-
-    // load the shaders
-    Buffer vertexShader = g_pAssetLoader->SyncOpenAndReadBinary(vsFilename);
-    Buffer pixelShader = g_pAssetLoader->SyncOpenAndReadBinary(fsFilename);
-
-    D3D12_SHADER_BYTECODE vertexShaderByteCode;
-    vertexShaderByteCode.pShaderBytecode = vertexShader.GetData();
-    vertexShaderByteCode.BytecodeLength = vertexShader.GetDataSize();
-
-    D3D12_SHADER_BYTECODE pixelShaderByteCode;
-    pixelShaderByteCode.pShaderBytecode = pixelShader.GetData();
-    pixelShaderByteCode.BytecodeLength = pixelShader.GetDataSize();
 
     // create the input layout object
     D3D12_INPUT_ELEMENT_DESC ied[] =
@@ -1019,10 +1006,12 @@ bool D3d12GraphicsManager::InitializeShaders() {
         defaultStencilOp, defaultStencilOp };
 
     // describe and create the graphics pipeline state object (PSO)
+    D3dShaderProgram shaderProgram = *reinterpret_cast<D3dShaderProgram*>(g_pShaderManager->GetDefaultShaderProgram());
+
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psod = {};
     psod.pRootSignature = m_pRootSignature;
-    psod.VS             = vertexShaderByteCode;
-    psod.PS             = pixelShaderByteCode;
+    psod.VS             = shaderProgram.vertexShaderByteCode;
+    psod.PS             = shaderProgram.pixelShaderByteCode;
     psod.BlendState     = bld;
     psod.SampleMask     = UINT_MAX;
     psod.RasterizerState= rsd;
@@ -1036,28 +1025,26 @@ bool D3d12GraphicsManager::InitializeShaders() {
 
     if (FAILED(hr = m_pDev->CreateGraphicsPipelineState(&psod, IID_PPV_ARGS(&m_pPipelineState))))
     {
-        return false;
+        return hr;
     }
+
+    return hr;
+}
+
+HRESULT D3d12GraphicsManager::CreateCommandList()
+{
+    HRESULT = S_OK;
 
     if (!m_pCommandList)
     {
-        if (FAILED(hr = m_pDev->CreateCommandList(0, 
+        hr = m_pDev->CreateCommandList(0, 
                     D3D12_COMMAND_LIST_TYPE_DIRECT, 
                     m_pCommandAllocator, 
                     m_pPipelineState, 
-                    IID_PPV_ARGS(&m_pCommandList))))
-        {
-            return false;
-        }
+                    IID_PPV_ARGS(&m_pCommandList));
     }
 
-    return true;
-}
-
-void D3d12GraphicsManager::ClearShaders()
-{
-    SafeRelease(&m_pCommandList);
-    SafeRelease(&m_pPipelineState);
+    return hr;
 }
 
 void D3d12GraphicsManager::InitializeBuffers(const Scene& scene)
